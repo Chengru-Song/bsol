@@ -23,7 +23,7 @@ func bsol(runs uint64, time bool, source ...string) error {
 		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		address = crypto.PubkeyToAddress(key.PublicKey)
 		gspec   = &core.Genesis{
-			GasLimit: 800000000,
+			GasLimit: 1000000000000000,
 			Config: &params.ChainConfig{
 				HomesteadBlock:      big.NewInt(0),
 				EIP150Block:         big.NewInt(0),
@@ -35,20 +35,20 @@ func bsol(runs uint64, time bool, source ...string) error {
 				IstanbulBlock:       big.NewInt(0),
 			},
 			Alloc: core.GenesisAlloc{
-				address: {Balance: big.NewInt(9000000000000000000)},
+				address: {Balance: big.NewInt(999999999999999999)},
 			},
 		}
 	)
 	engine := ethash.NewFaker()
 	chainConfig, _, err := core.SetupGenesisBlock(db, gspec)
 	if err != nil {
-		return fmt.Errorf("Error: %s\n", err.Error())
+		return fmt.Errorf("error: %s\n", err.Error())
 	}
 	blockchain, err := core.NewBlockChain(db, &core.CacheConfig{
 		TrieDirtyDisabled: true,
 	}, chainConfig, engine, vm.Config{}, nil)
 	if err != nil {
-		return fmt.Errorf("Error: %s\n", err.Error())
+		return fmt.Errorf("error: %s\n", err.Error())
 
 	}
 	_ = blockchain.StateCache().TrieDB()
@@ -56,16 +56,19 @@ func bsol(runs uint64, time bool, source ...string) error {
 
 	contractBackend := backends.NewSimulatedBackend(gspec.Alloc, gspec.GasLimit)
 	transactOpts := bind.NewKeyedTransactor(key)
+	transactOpts.GasLimit = 0
 	transactOpts.GasPrice = big.NewInt(1)
 	_ = transactOpts
 	_ = contractBackend
 	data, err := deployBenchmarks(contractBackend, transactOpts, source)
 	if err != nil {
-		return fmt.Errorf("Error: %s\n", err.Error())
+		fmt.Printf("err: %+v\n", err)
+		return fmt.Errorf("Error: %+v\n", err.Error())
 
 	}
 	err = executeBenchmarks(contractBackend, transactOpts, data, runs, time)
 	if err != nil {
+		fmt.Printf("%+v\n", err)
 		return fmt.Errorf("Error: %s\n", err.Error())
 	}
 	return nil
